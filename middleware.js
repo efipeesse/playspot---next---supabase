@@ -2,30 +2,31 @@
 import { NextResponse } from "next/server";
 
 export function middleware(req) {
-  const url = req.nextUrl.clone();
+  const { pathname } = req.nextUrl;
 
-  const isAdminRoute = url.pathname.startsWith("/admin");
-  const isLoginRoute = url.pathname === "/admin/login";
-
-  const hasToken = req.cookies.get("admin_token");
-
-  // Se tentar acessar /admin (ou qualquer /admin/...) sem estar logado → manda pro /admin/login
-  if (isAdminRoute && !isLoginRoute && !hasToken) {
-    url.pathname = "/admin/login";
-    return NextResponse.redirect(url);
+  // Login pode ser acessado sem estar logado
+  if (pathname.startsWith("/admin/login")) {
+    return NextResponse.next();
   }
 
-  // Se já estiver logado e tentar ir pra tela de login → manda pra /admin
-  if (isLoginRoute && hasToken) {
-    url.pathname = "/admin";
-    return NextResponse.redirect(url);
+  // Outras rotas /admin precisam do cookie
+  const isAdminRoute = pathname.startsWith("/admin");
+  if (!isAdminRoute) {
+    return NextResponse.next();
   }
 
-  // Qualquer outra rota segue normalmente
+  const isAdmin =
+    req.cookies.get("playspot_admin")?.value === "1";
+
+  if (!isAdmin) {
+    const loginUrl = new URL("/admin/login", req.url);
+    loginUrl.searchParams.set("redirectTo", pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
   return NextResponse.next();
 }
 
-// Só roda middleware nas rotas /admin/*
 export const config = {
   matcher: ["/admin/:path*"],
 };
