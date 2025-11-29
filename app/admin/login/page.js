@@ -1,45 +1,27 @@
-"use client";
+import { NextResponse } from "next/server";
 
-import { useState } from "react";
+export async function POST(req) {
+  const { password } = await req.json();
 
-export default function AdminLoginPage() {
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-
-  async function handleLogin(e) {
-    e.preventDefault();
-
-    const res = await fetch("/api/admin/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password }),
-    });
-
-    if (res.ok) {
-      window.location.href = "/admin"; // redireciona pra área protegida
-    } else {
-      setError("Senha incorreta");
-    }
+  if (!password) {
+    return NextResponse.json({ error: "Senha obrigatória" }, { status: 400 });
   }
 
-  return (
-    <div style={{ maxWidth: 400, margin: "80px auto", textAlign: "center" }}>
-      <h1>Login Admin</h1>
+  // senha armazenada corretamente no Vercel
+  const correctPassword = process.env.ADMIN_PASSWORD;
 
-      <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: 15 }}>
-        <input
-          type="password"
-          placeholder="Senha"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          style={{ padding: 10, borderRadius: 8 }}
-        />
-        <button style={{ padding: 12, borderRadius: 8, background: "#0070f3", color: "#fff" }}>
-          Entrar
-        </button>
-      </form>
+  if (password !== correctPassword) {
+    return NextResponse.json({ error: "Senha incorreta" }, { status: 401 });
+  }
 
-      {error && <p style={{ color: "red", marginTop: 10 }}>{error}</p>}
-    </div>
-  );
+  // cria cookie de autenticação
+  const res = NextResponse.json({ success: true });
+
+  res.cookies.set("admin-auth", "true", {
+    httpOnly: true,
+    path: "/",
+    maxAge: 60 * 60 * 12, // 12 horas
+  });
+
+  return res;
 }
