@@ -1,23 +1,20 @@
 import { NextResponse } from "next/server";
-import { createMiddlewareSupabaseClient } from "@supabase/auth-helpers-nextjs";
 
-export async function middleware(req) {
-  const res = NextResponse.next();
-  const supabase = createMiddlewareSupabaseClient({ req, res });
+export function middleware(request) {
+  // Cookie padrão que o Supabase usa para sessão
+  const session = request.cookies.get("sb-access-token")?.value;
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  const isAdminRoute = request.nextUrl.pathname.startsWith("/admin");
 
-  // Se tentar acessar /admin sem estar logado → redireciona
-  if (req.nextUrl.pathname.startsWith("/admin") && !session) {
-    const loginUrl = new URL("/admin/login", req.url);
+  // Se for rota /admin e não tiver sessão, manda para o login
+  if (isAdminRoute && !session) {
+    const loginUrl = new URL("/admin/login", request.url);
     return NextResponse.redirect(loginUrl);
   }
 
-  return res;
+  return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/admin/:path*"], // protege tudo dentro de /admin
+  matcher: ["/admin/:path*"],
 };
