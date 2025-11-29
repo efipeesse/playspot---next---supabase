@@ -1,13 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export default function AdminLoginPage() {
-  const router = useRouter();
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("redirectTo") || "/admin";
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -15,116 +18,133 @@ export default function AdminLoginPage() {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/admin/simple-login", {
+      const res = await fetch("/api/admin/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password }),
       });
 
+      const data = await res.json();
+
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        setError(data.error || "Senha incorreta.");
-        setLoading(false);
+        if (data?.error === "INVALID_PASSWORD") {
+          setError("Senha incorreta.");
+        } else if (data?.error === "SERVER_MISCONFIGURED") {
+          setError("ADMIN_PASSWORD não está configurada no servidor.");
+        } else {
+          setError("Erro ao fazer login. Tente novamente.");
+        }
         return;
       }
 
-      // Login OK → vai pra /admin
-      router.push("/admin");
+      router.push(redirectTo);
     } catch (err) {
-      setError("Erro ao fazer login. Tente novamente.");
+      console.error(err);
+      setError("Erro de rede. Tente novamente.");
+    } finally {
       setLoading(false);
     }
   }
 
   return (
-    <main
+    <div
       style={{
         minHeight: "100vh",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background:
-          "radial-gradient(circle at top, #1f2937 0, #020617 45%, #000 100%)",
-        color: "#f9fafb",
-        padding: "1.5rem",
+        background: "radial-gradient(circle at top, #0f172a, #020617)",
+        padding: "16px",
       }}
     >
-      <div
+      <form
+        onSubmit={handleSubmit}
         style={{
           width: "100%",
-          maxWidth: "420px",
-          borderRadius: "24px",
-          padding: "2rem",
+          maxWidth: "440px",
           background:
-            "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(8,47,73,0.98))",
-          boxShadow: "0 25px 70px rgba(15,23,42,0.85)",
-          border: "1px solid rgba(148,163,184,0.25)",
+            "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,64,175,0.8))",
+          borderRadius: "24px",
+          padding: "32px 28px",
+          boxShadow:
+            "0 24px 80px rgba(0,0,0,0.70), 0 0 40px rgba(56,189,248,0.35)",
+          color: "white",
         }}
       >
-        <h1 style={{ fontSize: "1.75rem", fontWeight: 700, marginBottom: "0.25rem" }}>
+        <h1 style={{ fontSize: "24px", fontWeight: "700", marginBottom: "8px" }}>
           PlaySpot · Admin
         </h1>
-        <p style={{ fontSize: "0.9rem", color: "#cbd5f5", marginBottom: "1.5rem" }}>
+        <p
+          style={{
+            fontSize: "14px",
+            color: "rgba(226,232,240,0.8)",
+            marginBottom: "24px",
+          }}
+        >
           Área restrita. Informe a senha de administrador para continuar.
         </p>
 
-        <form onSubmit={handleSubmit} style={{ display: "grid", gap: "1rem" }}>
-          <label style={{ fontSize: "0.8rem", color: "#e5e7eb" }}>
-            Senha de administrador
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Digite a senha"
-              required
-              style={{
-                marginTop: "0.4rem",
-                width: "100%",
-                padding: "0.7rem 0.85rem",
-                borderRadius: "999px",
-                border: "1px solid rgba(148,163,184,0.4)",
-                backgroundColor: "rgba(15,23,42,0.9)",
-                color: "#f9fafb",
-                outline: "none",
-              }}
-            />
-          </label>
+        <label
+          htmlFor="password"
+          style={{ fontSize: "14px", fontWeight: "500", marginBottom: "8px", display: "block" }}
+        >
+          Senha de administrador
+        </label>
+        <input
+          id="password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Digite a senha"
+          style={{
+            width: "100%",
+            padding: "12px 16px",
+            borderRadius: "999px",
+            border: "1px solid rgba(148,163,184,0.5)",
+            background: "rgba(15,23,42,0.8)",
+            color: "white",
+            outline: "none",
+            marginBottom: "14px",
+          }}
+        />
 
-          {error && (
-            <div
-              style={{
-                fontSize: "0.8rem",
-                color: "#fecaca",
-                backgroundColor: "rgba(127,29,29,0.45)",
-                borderRadius: "12px",
-                padding: "0.6rem 0.8rem",
-              }}
-            >
-              {error}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
+        {error && (
+          <div
             style={{
-              marginTop: "0.4rem",
-              width: "100%",
-              borderRadius: "999px",
-              padding: "0.75rem",
-              border: "none",
-              fontWeight: 600,
-              fontSize: "0.95rem",
-              cursor: loading ? "default" : "pointer",
-              background:
-                "linear-gradient(135deg, #22c55e, #16a34a 40%, #22c55e 65%, #4ade80)",
-              opacity: loading ? 0.7 : 1,
+              background: "rgba(248,113,113,0.15)",
+              border: "1px solid rgba(248,113,113,0.5)",
+              color: "#fecaca",
+              borderRadius: "12px",
+              padding: "8px 12px",
+              fontSize: "13px",
+              marginBottom: "14px",
             }}
           >
-            {loading ? "Entrando..." : "Entrar no painel"}
-          </button>
-        </form>
-      </div>
-    </main>
+            {error}
+          </div>
+        )}
+
+        <button
+          type="submit"
+          disabled={loading}
+          style={{
+            width: "100%",
+            padding: "12px 16px",
+            borderRadius: "999px",
+            border: "none",
+            fontWeight: "600",
+            fontSize: "15px",
+            background:
+              "linear-gradient(90deg, #22c55e, #16a34a)",
+            color: "#020617",
+            cursor: loading ? "wait" : "pointer",
+            opacity: loading ? 0.8 : 1,
+            marginTop: "4px",
+          }}
+        >
+          {loading ? "Entrando..." : "Entrar no painel"}
+        </button>
+      </form>
+    </div>
   );
 }
