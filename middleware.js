@@ -4,24 +4,22 @@ import { NextResponse } from "next/server";
 export function middleware(req) {
   const { pathname } = req.nextUrl;
 
-  // Login pode ser acessado sem estar logado
+  // Permitir acesso ao login sempre
   if (pathname.startsWith("/admin/login")) {
     return NextResponse.next();
   }
 
-  // Outras rotas /admin precisam do cookie
-  const isAdminRoute = pathname.startsWith("/admin");
-  if (!isAdminRoute) {
-    return NextResponse.next();
-  }
+  // Bloquear demais rotas /admin
+  if (pathname.startsWith("/admin")) {
+    const cookie = req.cookies.get("playspot_admin")?.value;
 
-  const isAdmin =
-    req.cookies.get("playspot_admin")?.value === "1";
+    const isAdmin = cookie === "1";
 
-  if (!isAdmin) {
-    const loginUrl = new URL("/admin/login", req.url);
-    loginUrl.searchParams.set("redirectTo", pathname);
-    return NextResponse.redirect(loginUrl);
+    if (!isAdmin) {
+      const loginUrl = new URL("/admin/login", req.url);
+      loginUrl.searchParams.set("redirectTo", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
   }
 
   return NextResponse.next();
