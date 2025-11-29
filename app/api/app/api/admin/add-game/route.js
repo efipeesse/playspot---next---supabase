@@ -1,60 +1,47 @@
-import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabaseAdminClient";
+// app/api/admin/add-game/route.js
+import { NextResponse } from 'next/server';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 export async function POST(request) {
   try {
     const body = await request.json();
+    const { secret, title, description, image_url, tags, download_url } = body;
 
-    const {
-      title,
-      description,
-      image_url,
-      download_url,
-      tags,
-      admin_secret,
-    } = body;
-
-    if (admin_secret !== process.env.ADMIN_SECRET) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Confere senha de admin
+    if (secret !== process.env.ADMIN_SECRET) {
+      return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
     }
 
     if (!title || !download_url) {
       return NextResponse.json(
-        { error: "title e download_url são obrigatórios" },
+        { error: 'Título e link de download são obrigatórios.' },
         { status: 400 }
       );
     }
 
-    const tagsArray =
-      Array.isArray(tags)
-        ? tags
-        : typeof tags === "string" && tags.trim() !== ""
-        ? tags.split(",").map((t) => t.trim())
-        : [];
-
     const { data, error } = await supabaseAdmin
-      .from("games")
+      .from('games')
       .insert({
         title,
-        description: description || "",
-        image_url: image_url || "",
+        description: description || '',
+        image_url: image_url || '',
+        tags: tags || [],
         download_url,
-        tags: tagsArray,
       })
-      .select("*")
+      .select()
       .single();
 
     if (error) {
-      console.error("Erro ao inserir jogo:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error('Erro Supabase (add-game):', error);
+      return NextResponse.json(
+        { error: 'Erro ao salvar no banco.' },
+        { status: 500 }
+      );
     }
 
-    return NextResponse.json({ success: true, game: data }, { status: 201 });
+    return NextResponse.json({ game: data }, { status: 201 });
   } catch (err) {
-    console.error("Erro inesperado:", err);
-    return NextResponse.json(
-      { error: "Erro interno ao criar jogo" },
-      { status: 500 }
-    );
+    console.error('Erro inesperado (add-game):', err);
+    return NextResponse.json({ error: 'Erro inesperado.' }, { status: 500 });
   }
 }
