@@ -1,54 +1,45 @@
 "use client";
-import { useState } from "react";
-import { supabaseClient } from "@/lib/supabaseClient"; 
-import { useRouter } from "next/navigation";
 
-export default function LoginPage() {
-  const router = useRouter();
-  const [email, setEmail] = useState("");
+import { useState } from "react";
+
+export default function AdminLoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
   async function handleLogin(e) {
     e.preventDefault();
-    setError("");
 
-    const { data, error } = await supabaseClient.auth.signInWithPassword({
-      email,
-      password,
+    const res = await fetch("/api/admin/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password }),
     });
 
-    if (error) {
-      setError(error.message);
-      return;
+    if (res.ok) {
+      window.location.href = "/admin"; // redireciona pra área protegida
+    } else {
+      setError("Senha incorreta");
     }
-
-    router.push("/admin");
   }
 
   return (
-    <main style={{ padding: 40 }}>
+    <div style={{ maxWidth: 400, margin: "80px auto", textAlign: "center" }}>
       <h1>Login Admin</h1>
 
-      <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", maxWidth: 300, gap: 10 }}>
-        <input 
-          type="email" 
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-
-        <input 
-          type="password" 
+      <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: 15 }}>
+        <input
+          type="password"
           placeholder="Senha"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          style={{ padding: 10, borderRadius: 8 }}
         />
-
-        <button type="submit">Entrar</button>
+        <button style={{ padding: 12, borderRadius: 8, background: "#0070f3", color: "#fff" }}>
+          Entrar
+        </button>
       </form>
 
-      {error && <p style={{ color: "red" }}>{error}</p>}
-    </main>
+      {error && <p style={{ color: "red", marginTop: 10 }}>{error}</p>}
+    </div>
   );
 }
